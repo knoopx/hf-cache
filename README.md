@@ -1,5 +1,7 @@
 # hf-cache - Hugging Face Cache Manager
 
+![hf-cache screenshot](./assets/screenshot.png)
+
 A terminal user interface (TUI) application for browsing and managing locally downloaded Hugging Face models and datasets.
 
 ## Features
@@ -54,8 +56,6 @@ The application reads the Hugging Face cache from `~/.cache/huggingface/` by def
 ## Main Screen
 
 The main screen displays a table of all locally cached Hugging Face content with the following columns:
-
-![hf-cache screenshot](./assets/screenshot.png)
 
 - **Repository**: The repository ID (e.g., `bert-base-uncased`)
 - **Size**: Human-readable size (MB or GB)
