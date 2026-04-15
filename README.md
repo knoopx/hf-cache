@@ -12,16 +12,22 @@ A TUI application for browsing and managing Hugging Face cache.
 
 ## Usage
 
-```bash
-# Run from repository
-nix run github:knoopx/hf-cache
+### Run from repository
 
-# Add to your flake.nix manually:
-#   inputs.hf-cache.url = "github:knoopx/hf-cache";
-#   outputs = { self, nixpkgs, hf-cache, ... }:
-#     {
-#       apps.x86_64-linux.default = hf-cache.apps.x86_64-linux.default;
-#     };
+```bash
+nix run github:knoopx/hf-cache
+```
+
+### Add to your flake.nix manually
+
+```nix
+{
+  inputs.hf-cache.url = "github:knoopx/hf-cache";
+  outputs = { self, nixpkgs, hf-cache, ... }:
+    {
+      apps.x86_64-linux.default = hf-cache.apps.x86_64-linux.default;
+    };
+}
 ```
 
 ## Keyboard Shortcuts
@@ -31,10 +37,3 @@ nix run github:knoopx/hf-cache
 ## Technical Details
 
 Python 3.13+ with [Textual](https://textual.textualize.io/) and [huggingface_hub](https://github.com/huggingface/huggingface_hub).
-
-## Flake Outputs
-
-This flake provides two outputs:
-
-- **packages.x86_64-linux.default**: Builds the hf-cache Python package with all dependencies (huggingface-hub, rich, textual)
-- **apps.x86_64-linux.default**: Defines the hf-cache executable that can be run with `nix run` or installed globally
