@@ -55,6 +55,8 @@ The application reads the Hugging Face cache from `~/.cache/huggingface/` by def
 
 The main screen displays a table of all locally cached Hugging Face content with the following columns:
 
+![hf-cache screenshot](./assets/screenshot.png)
+
 - **Repository**: The repository ID (e.g., `bert-base-uncased`)
 - **Size**: Human-readable size (MB or GB)
 - **Files**: Number of files in the cache entry
