@@ -1,0 +1,19 @@
+[project]
+name = "hf-cache"
+version = "0.1.0"
+description = "A TUI app to browse and manage locally downloaded Hugging Face models and datasets"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "huggingface-hub==1.9.0",
+    "rich==14.3.3",
+    "textual==8.2.3",
+]
+
+[project.scripts]
+hf-cache = "main:main"
+
+[dependency-groups]
+dev = [
+    "ruff==0.15.10",
+]
