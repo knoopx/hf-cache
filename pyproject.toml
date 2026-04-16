@@ -13,6 +13,9 @@ dependencies = [
 [project.scripts]
 hf-cache = "main:main"
 
+[tool.setuptools]
+py-modules = ["main"]
+
 [dependency-groups]
 dev = [
     "ruff==0.15.10",

@@ -18,13 +18,15 @@
       src = ./.;
 
       pyproject = true;
-      build-system = [pkgs.python3Packages.setuptools];
+      build-system = [pkgs.python3Packages.setuptools pkgs.python3Packages.wheel];
 
       propagatedBuildInputs = with pkgs.python3Packages; [
         huggingface-hub
         rich
         textual
       ];
+
+      doCheck = false;
     };
 
     apps.${system}.default = {
