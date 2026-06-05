@@ -3,20 +3,19 @@ name = "hf-cache"
 version = "0.1.0"
 description = "A TUI app to browse and manage locally downloaded Hugging Face models and datasets"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 dependencies = [
-    "huggingface-hub==1.9.0",
-    "rich==14.3.3",
-    "textual==8.2.3",
+    "rich>=14",
+    "textual>=8",
 ]
 
 [project.scripts]
-hf-cache = "main:main"
+hf-cache = "hf_cache.__main__:main"
 
-[tool.setuptools]
-py-modules = ["main"]
+[tool.setuptools.packages.find]
+include = ["hf_cache*"]
 
 [dependency-groups]
 dev = [
-    "ruff==0.15.10",
+    "ruff>=0.15",
 ]

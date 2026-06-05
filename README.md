@@ -34,6 +34,3 @@ nix run github:knoopx/hf-cache
 
 `q` quit, `r` refresh, `d` delete, `Enter` confirm, `Escape` cancel
 
-## Technical Details
-
-Python 3.13+ with [Textual](https://textual.textualize.io/) and [huggingface_hub](https://github.com/huggingface/huggingface_hub).

@@ -11,17 +11,17 @@
   }: let
     system = "x86_64-linux";
     pkgs = nixpkgs.legacyPackages.${system};
+    py = pkgs.python314;
   in {
-    packages.${system}.default = pkgs.python3Packages.buildPythonPackage rec {
+    packages.${system}.default = py.pkgs.buildPythonPackage rec {
       pname = "hf-cache";
       version = "0.1.0";
       src = ./.;
 
       pyproject = true;
-      build-system = [pkgs.python3Packages.setuptools pkgs.python3Packages.wheel];
+      build-system = [py.pkgs.setuptools py.pkgs.wheel];
 
-      propagatedBuildInputs = with pkgs.python3Packages; [
-        huggingface-hub
+      propagatedBuildInputs = with py.pkgs; [
         rich
         textual
       ];
