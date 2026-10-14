@@ -1,0 +1,25 @@
+{
+  "name": "hf-cache-gpuix",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --hot app.tsx",
+    "build": "bun build --compile app.tsx --outfile dist/hf-cache",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@gpuix/native": "0.10.0",
+    "@gpuix/react": "0.10.0",
+    "adwaita-gpuix": "https://github.com/knoopx/adwaita-gpuix",
+    "react": "^19.3.1"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.3",
+    "@types/react": "^19.3.0",
+    "typescript": "^7.0.2"
+  },
+  "optionalDependencies": {
+    "@gpuix/native-linux-x64-gnu": "0.10.0"
+  }
+}

@@ -1,14 +1,10 @@
 # hf-cache
 
-A TUI application for browsing and managing Hugging Face cache.
+A desktop GUI application for browsing and managing the Hugging Face cache, built with [GPUIX](https://github.com/antibonzola/gpuix) (a Rust GPU-accelerated React renderer) using the Adwaita (GTK4/libadwaita) nightsky theme.
 
 ![hf-cache screenshot](./assets/screenshot.png)
 
-## Features
-
-- Browse models and datasets in `~/.cache/huggingface/`
-- Sort by repository, size, files, revisions, or last modified time
-- Delete cache entries with confirmation
+  ![Delete cache entry dialog](./assets/screenshot-delete-dialog.png)
 
 ## Usage
 
@@ -30,7 +26,11 @@ nix run github:knoopx/hf-cache
 }
 ```
 
-## Keyboard Shortcuts
+## Develop
 
-`q` quit, `r` refresh, `d` delete, `Enter` confirm, `Escape` cancel
-
+```bash
+bun install
+bun run dev        # hot reload
+bun run typecheck  # tsc --noEmit
+bun run build      # bun build --compile -> dist/hf-cache standalone binary
+```
