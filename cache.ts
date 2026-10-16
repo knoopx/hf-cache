@@ -1,20 +1,12 @@
-/**
- * HF cache directory scanner and deletion — ported from hf_cache/cache.py.
- * Self-contained: node:fs/promises + node:os + node:path only, no external deps.
- */
-
 import { readdir, readFile, realpath, rm, stat } from "node:fs/promises";
 import type { Dirent, Stats } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 
-/** Default HF cache location. */
 const DEFAULT_CACHE_DIR = path.join(homedir(), ".cache", "huggingface", "hub");
 
-/** OS helper files to skip. */
 const FILES_TO_IGNORE = new Set([".DS_Store"]);
 
-/** Valid repo types. */
 const VALID_REPO_TYPES = new Set(["model", "dataset", "space"]);
 
 export interface Revision {
@@ -37,14 +29,12 @@ export interface RepoInfo {
   last_modified: number;
 }
 
-/** Expand a leading "~" the way Path.expanduser() does. */
 function expandUser(p: string): string {
   if (p === "~") return homedir();
   if (p.startsWith("~/")) return path.join(homedir(), p.slice(2));
   return p;
 }
 
-/** Resolve the HF cache directory from env or default. */
 export function getCacheDir(): string {
   const env = process.env.HF_HUB_CACHE;
   if (env) {
@@ -53,26 +43,20 @@ export function getCacheDir(): string {
   return path.resolve(DEFAULT_CACHE_DIR);
 }
 
-/**
- * Parse a cache directory name like "models--owner--repo" into { type, id }.
- * Returns null if the name is not a valid HF cache directory.
- */
-export function parseRepoDirName(name: string): { type: string; id: string } | null {
+export function parseRepoDirName(
+  name: string,
+): { type: string; id: string } | null {
   const idx = name.indexOf("--");
   if (idx === -1) return null;
   const prefix = name.slice(0, idx);
   const rest = name.slice(idx + 2);
-  // "models" -> "model", "datasets" -> "dataset", "spaces" -> "space"
+
   const repoType = prefix.slice(0, -1);
   if (!VALID_REPO_TYPES.has(repoType)) return null;
   const repoId = rest.split("--").join("/");
   return { type: repoType, id: repoId };
 }
 
-// Recursively collect file paths under dir (directories are descended into;
-// everything that is not a directory is listed, mirroring the Python
-// recursive glob plus is_dir() filtering). Read errors are ignored,
-// like the Python try/except.
 async function collectFiles(dir: string, out: string[]): Promise<void> {
   let entries: Dirent[];
   try {
@@ -98,11 +82,6 @@ async function isDirectory(p: string): Promise<boolean> {
   }
 }
 
-/**
- * Read the refs directory (e.g. refs/main -> commit_hash) into a
- * hash -> sorted-ref-names map. Unreadable files are skipped, matching the
- * Python OSError / UnicodeError catch.
- */
 async function readRefs(refsPath: string): Promise<Map<string, string[]>> {
   const refsByHash = new Map<string, Set<string>>();
   if (!(await isDirectory(refsPath))) return new Map();
@@ -132,10 +111,6 @@ async function readRefs(refsPath: string): Promise<Map<string, string[]>> {
   return sorted;
 }
 
-/**
- * Collect the unique blobs a revision references: resolve each snapshot
- * file to its blob and record blob stats. Unresolvable files are skipped.
- */
 async function collectRevisionBlobs(
   revisionPath: string,
   blobStats: Map<string, Stats>,
@@ -146,7 +121,6 @@ async function collectRevisionBlobs(
   for (const filePath of revFiles) {
     let blobPath: string;
     try {
-      // HF snapshot files are symlinks into ../../blobs/
       blobPath = await realpath(filePath);
     } catch {
       continue;
@@ -163,10 +137,6 @@ async function collectRevisionBlobs(
   return cachedFiles;
 }
 
-/**
- * A revision's size (unique blobs only) and last-modified time, falling
- * back to the revision directory's mtime when it has no blobs.
- */
 async function revisionSizeAndMtime(
   cachedFiles: Set<string>,
   blobStats: Map<string, Stats>,
@@ -191,9 +161,6 @@ async function revisionSizeAndMtime(
   return { size, mtime };
 }
 
-/**
- * Scan one snapshot (revision) directory and return the revision info.
- */
 async function scanRevision(
   revisionPath: string,
   commitHash: string,
@@ -216,10 +183,6 @@ async function scanRevision(
   };
 }
 
-/**
- * Repo-level size and access/modification times from the blob stats, falling
- * back to the repo directory's own stats when there are no blobs.
- */
 async function repoStats(
   blobStats: Map<string, Stats>,
   repoPath: string,
@@ -239,13 +202,16 @@ async function repoStats(
   }
   try {
     const s = await stat(repoPath);
-    return { size: 0, lastAccessed: s.atimeMs / 1000, lastModified: s.mtimeMs / 1000 };
+    return {
+      size: 0,
+      lastAccessed: s.atimeMs / 1000,
+      lastModified: s.mtimeMs / 1000,
+    };
   } catch {
     return { size: 0, lastAccessed: 0, lastModified: 0 };
   }
 }
 
-/** Scan a single cached repo directory and return info, or null if invalid. */
 export async function scanRepo(repoPath: string): Promise<RepoInfo | null> {
   if (!(await isDirectory(repoPath))) return null;
 
@@ -258,9 +224,8 @@ export async function scanRepo(repoPath: string): Promise<RepoInfo | null> {
 
   const refsByHash = await readRefs(path.join(repoPath, "refs"));
 
-  // Walk snapshots
   const revisions: Revision[] = [];
-  const blobStats = new Map<string, Stats>(); // blob_path -> stat
+  const blobStats = new Map<string, Stats>();
 
   let entries: Dirent[];
   try {
@@ -268,7 +233,7 @@ export async function scanRepo(repoPath: string): Promise<RepoInfo | null> {
   } catch {
     entries = [];
   }
-  // Deterministic revision order (Python's iterdir order is OS-dependent).
+
   entries.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
 
   for (const entry of entries) {
@@ -293,10 +258,8 @@ export async function scanRepo(repoPath: string): Promise<RepoInfo | null> {
   };
 }
 
-/** Entry names to skip when listing the cache directory. */
 const CACHE_DIR_IGNORE = new Set([".locks", "CACHEDIR.TAG"]);
 
-/** List the repo directories inside a cache directory. */
 async function listRepoDirs(dir: string): Promise<string[]> {
   let entries: Dirent[];
   try {
@@ -313,7 +276,6 @@ async function listRepoDirs(dir: string): Promise<string[]> {
   return dirs;
 }
 
-/** Scan the HF cache directory and return a list of repo info. */
 export async function scanCacheDir(cacheDir?: string): Promise<RepoInfo[]> {
   const dirs = await listRepoDirs(cacheDir ?? getCacheDir());
   const repos: RepoInfo[] = [];
@@ -324,7 +286,6 @@ export async function scanCacheDir(cacheDir?: string): Promise<RepoInfo[]> {
   return repos;
 }
 
-/** Delete an entire cached repo directory. */
 export async function deleteRepo(repoPath: string): Promise<void> {
   await rm(repoPath, { recursive: true, force: true });
 }

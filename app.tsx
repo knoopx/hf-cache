@@ -1,17 +1,3 @@
-/**
- * GPUIX React "hf-cache" desktop GUI app — Adwaita (GTK4/libadwaita) nightsky.
- *
- * A browser/manager for the Hugging Face cache built exclusively from
- * `adwaita-gpuix` components: a two-pane body — a BoxedList of resource rows
- * (type icon, title, meta, size, symbolic delete Button) left and a details
- * pane for the selected resource right (type, size, files, revisions, last
- * accessed/modified, path, and the per-revision breakdown); a status bar with
- * Kbd key hints; and an AlertDialog delete-confirmation flow with the standing
- * keyboard shortcuts. There is no header bar, no search field and no refresh
- * button — sorting is cycled through with the "/" key and refresh stays on
- * "r".
- */
-
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   render,
@@ -37,14 +23,9 @@ import {
   Icon,
   type IconName,
 } from "adwaita-gpuix/src";
-import {
-  scanCacheDir,
-  deleteRepo,
-  type RepoInfo,
-} from "./cache";
+import { scanCacheDir, deleteRepo, type RepoInfo } from "./cache";
 import { formatSize, formatTimeSince, formatTimestamp } from "./formatting";
 
-/** Sort labels (index = sortKey). */
 const SORT_LABELS = [
   "Resource",
   "Size",
@@ -53,18 +34,15 @@ const SORT_LABELS = [
   "Last Modified",
 ] as const;
 
-/** Comparators per sort key (index = sortKey), all descending except id. */
-const SORT_COMPARATORS: ReadonlyArray<(a: RepoInfo, b: RepoInfo) => number> =
-  [
-    (a, b) =>
-      a.repo_id.localeCompare(b.repo_id, undefined, { sensitivity: "base" }),
-    (a, b) => b.size_on_disk - a.size_on_disk,
-    (a, b) => b.nb_files - a.nb_files,
-    (a, b) => b.revisions.length - a.revisions.length,
-    (a, b) => b.last_modified - a.last_modified,
-  ];
+const SORT_COMPARATORS: ReadonlyArray<(a: RepoInfo, b: RepoInfo) => number> = [
+  (a, b) =>
+    a.repo_id.localeCompare(b.repo_id, undefined, { sensitivity: "base" }),
+  (a, b) => b.size_on_disk - a.size_on_disk,
+  (a, b) => b.nb_files - a.nb_files,
+  (a, b) => b.revisions.length - a.revisions.length,
+  (a, b) => b.last_modified - a.last_modified,
+];
 
-/** Actions the root keydown handler can dispatch, by bound key. */
 interface KeyActions {
   refresh: () => void;
   cycleSort: () => void;
@@ -73,8 +51,6 @@ interface KeyActions {
   jumpTo: (index: number) => void;
 }
 
-/** Bound keys and their actions (Enter/Escape are handled separately —
- * they act only while a delete is pending). */
 const KEY_ACTIONS: Record<string, (actions: KeyActions) => void> = {
   q: () => process.exit(0),
   r: (a) => a.refresh(),
@@ -88,24 +64,17 @@ const KEY_ACTIONS: Record<string, (actions: KeyActions) => void> = {
   end: (a) => a.jumpTo(-1),
 };
 
-/** Repo type → adwaita-gpuix icon (the library's curated icon set). */
 const TYPE_ICONS: Record<string, IconName> = {
   model: "layers",
   dataset: "folder",
   space: "inbox",
 };
 
-/** "**{n} entries · {totalSize}" — the reset status form. */
 function countStatus(repos: RepoInfo[]): string {
   const total = repos.reduce((s, r) => s + r.size_on_disk, 0);
   return `${repos.length} entries · ${formatSize(total)}`;
 }
 
-/**
- * A row's caption line: type, the union of refs across all revisions
- * (usually ["main"]), the short commit hash of the most recently modified
- * revision, the file count, and the last-modified age.
- */
 function rowMeta(repo: RepoInfo): string {
   const refs = [...new Set(repo.revisions.flatMap((r) => r.refs))];
   const latest = repo.revisions.reduce<
@@ -136,25 +105,19 @@ function HfCache() {
   const [status, setStatus] = useState<string>("");
   const [deleting, setDeleting] = useState<boolean>(false);
 
-  // Ref to the root div — used to explicitly focus it so keyboard events
-  // are dispatched to the root's onKeyDown handler.
   const rootRef = useRef<PublicInstance | null>(null);
 
-  // GPUIX renderer — used to focus the root element.
   const renderer = useGpuixRequired();
 
-  // Auto-collapse: the details pane hides on short windows so the list keeps its space.
   const { height: winHeight } = useWindowSize();
   const detailsCollapsed = winHeight < 560;
 
-  /** Re-scan the cache directory and update the list + status. */
   const refresh = useCallback(async () => {
     const scanned = await scanCacheDir();
     setRepos(scanned);
     setStatus(countStatus(scanned));
   }, []);
 
-  // Load on mount (once) and ensure the root div receives keyboard focus.
   useEffect(() => {
     refresh();
     const id = rootRef.current?.id;
@@ -163,22 +126,17 @@ function HfCache() {
     }
   }, [refresh, renderer]);
 
-  // Select the first item once the list loads (TUI behavior: first row selected).
   useEffect(() => {
     if (repos.length > 0 && selected === null) {
       setSelected(repos[0].repo_id);
     }
   }, [repos, selected]);
 
-  // Sort the list by the active key with fixed directions (no search filter —
-  // sorting is cycled through with the "/" key).
   const sorted = useMemo(() => {
     const copy = [...repos];
     copy.sort(SORT_COMPARATORS[sortKey]);
     return copy;
   }, [repos, sortKey]);
-
-  // --- Delete flow -------------------------------------------------------
 
   const requestDelete = () => {
     if (selected === null) {
@@ -213,7 +171,6 @@ function HfCache() {
     }
   };
 
-  /** Clear a pending delete and restore the count status. */
   const resetDelete = () => {
     setPendingDelete(null);
     setStatus(countStatus(repos));
@@ -221,13 +178,6 @@ function HfCache() {
 
   const cancelDelete = resetDelete;
 
-  // --- Keyboard ----------------------------------------------------------
-
-  /**
-   * Move the row-cursor selection by `delta` positions through the sorted
-   * list. With no selection yet, the first press lands on the top row for
-   * forward movement and the bottom row for backward.
-   */
   const moveSelection = (delta: number) => {
     const list = sorted;
     if (list.length === 0) return;
@@ -240,28 +190,19 @@ function HfCache() {
     setSelected(list[next].repo_id);
   };
 
-  /** Cycle to the next sort key ("/" key). */
   const cycleSort = () =>
     setSortKey(((sortKey + 1) % SORT_LABELS.length) as 0 | 1 | 2 | 3 | 4);
 
-  /** Jump the row cursor to an absolute row (0 = first, -1 = last). */
   const jumpTo = (index: number) => {
     if (sorted.length === 0) return;
-    setSelected(
-      sorted[index === -1 ? sorted.length - 1 : index].repo_id,
-    );
+    setSelected(sorted[index === -1 ? sorted.length - 1 : index].repo_id);
   };
 
-  /** The master keydown handler. Attached to the root div (which holds focus
-   * via tabIndex=0). 'q' quits, 'r' refreshes, 'd' opens the delete dialog
-   * for the selected row, Enter confirms a pending delete, Escape cancels
-   * it, and the arrow/page/home/end keys move the row cursor.
-   */
   const handleKeyDown = (event: EventPayload) => {
     if (deleting) return;
     const key = event.key;
     if (key === undefined) return;
-    // Enter and Escape act only while a delete is pending.
+
     if (key === "enter" || key === "escape") {
       if (pendingDelete === null) return;
       if (key === "enter") void confirmDelete();
@@ -270,17 +211,16 @@ function HfCache() {
     }
     const action = KEY_ACTIONS[key];
     if (action !== undefined) {
-      action({ refresh: () => void refresh(), cycleSort, requestDelete, moveSelection, jumpTo });
+      action({
+        refresh: () => void refresh(),
+        cycleSort,
+        requestDelete,
+        moveSelection,
+        jumpTo,
+      });
     }
   };
 
-  // --- Layout ------------------------------------------------------------
-
-  /**
-   * A boxed-list row: type icon + title/meta column + size + symbolic
-   * destructive-on-dialog delete button. Hairline separators come from the
-   * BoxedList wrapper.
-   */
   const renderRow = (repo: RepoInfo) => {
     const isSelected = selected === repo.repo_id;
     const isPending = pendingDelete === repo.repo_id;
@@ -366,7 +306,6 @@ function HfCache() {
     );
   };
 
-  /** One key-cap + label pair for the status-bar shortcut hints. */
   const keyHint = (key: string, label: string) => (
     <div
       key={key}
@@ -384,7 +323,6 @@ function HfCache() {
     </div>
   );
 
-  /** One key/value field row for the details pane. */
   const detailField = (label: string, value: string) => (
     <div
       key={label}
@@ -407,11 +345,6 @@ function HfCache() {
     </div>
   );
 
-  /**
-   * The right-hand details pane: full metadata for the selected resource —
-   * type, size, files, revisions, last accessed/modified, path, and the
-   * per-revision breakdown. An empty state when nothing is selected.
-   */
   const renderDetails = () => {
     const repo = repos.find((r) => r.repo_id === selected) ?? null;
     if (repo === null) {
@@ -443,7 +376,7 @@ function HfCache() {
           minHeight: 0,
         }}
       >
-        {/* Resource header: type icon + id + type. */}
+        {}
         <div
           style={{
             display: "flex",
@@ -485,7 +418,7 @@ function HfCache() {
         </div>
         <Separator />
         {detailField("Size", formatSize(repo.size_on_disk))}
-        {/* Files + Revisions: same label/value elements, disposed in one row of cells. */}
+        {}
         <div
           style={{
             display: "flex",
@@ -505,8 +438,12 @@ function HfCache() {
               flexGrow: 1,
             }}
           >
-            <T size="caption" color={colors.dim_fg}>Files</T>
-            <T size="body" color={colors.fg}>{repo.nb_files}</T>
+            <T size="caption" color={colors.dim_fg}>
+              Files
+            </T>
+            <T size="body" color={colors.fg}>
+              {repo.nb_files}
+            </T>
           </div>
           <div
             style={{
@@ -516,8 +453,12 @@ function HfCache() {
               flexGrow: 1,
             }}
           >
-            <T size="caption" color={colors.dim_fg}>Revisions</T>
-            <T size="body" color={colors.fg}>{repo.revisions.length}</T>
+            <T size="caption" color={colors.dim_fg}>
+              Revisions
+            </T>
+            <T size="body" color={colors.fg}>
+              {repo.revisions.length}
+            </T>
           </div>
         </div>
         {detailField(
@@ -572,7 +513,7 @@ function HfCache() {
         backgroundColor: colors.window_bg,
       }}
     >
-      {/* Two-pane body: boxed list of resource rows left, details pane right. */}
+      {}
       <div
         style={{
           display: "flex",
@@ -630,7 +571,7 @@ function HfCache() {
         )}
       </div>
 
-      {/* Status bar: status text left, Kbd key-cap hints right, on a hairline */}
+      {}
       <Separator />
       <div
         style={{
@@ -660,7 +601,7 @@ function HfCache() {
         </KbdGroup>
       </div>
 
-      {/* Delete confirmation: an Adwaita alert dialog over a scrim. */}
+      {}
       {pendingDelete !== null ? (
         <DeleteDialog
           pendingDelete={pendingDelete}
@@ -673,10 +614,6 @@ function HfCache() {
   );
 }
 
-/**
- * Delete confirmation: an Adwaita alert dialog over a scrim. Keyboard:
- * Enter confirms, Escape cancels (handled by the root keydown handler).
- */
 function DeleteDialog({
   pendingDelete,
   dark,
@@ -727,8 +664,6 @@ function App() {
   );
 }
 
-// Entry-point guard: only open a window when run as the program, not when
-// imported by a test.
 const isEntryPoint =
   typeof Bun !== "undefined"
     ? Bun.isStandaloneExecutable || Bun.main === import.meta.path
